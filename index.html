@@ -64,14 +64,15 @@
       z-index: 100;
     }
     #character_image_display {
-    position: absolute; /* Changed from fixed */
-    bottom: 0px;       /* Positioned relative to video-container */
-    right: 10px;        /* Positioned relative to video-container */
-    width: 400px;       /* Reduced width */
-    height: auto;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-    z-index: 150;     /* Ensures it's on top of video/canvas */
+      position: absolute;
+      top: 50%;
+      left: 0x;
+      transform: translateY(-50%);
+      width: 70vw;
+      height: calc(70vw * 0.75);
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      z-index: 150;  
     }
 
     #face_count_display {
@@ -88,6 +89,36 @@
       border-radius: 8px;
       z-index: 200; /* Ensure it's above other elements */
     }
+
+    .set-time {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 100;
+    }
+
+    .set-time input {
+      font-size: 1.2em;
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+    .label-time {
+      font-size: 1.2em;
+      color: white;
+      margin-bottom: 5px;
+    }
+    .set-time button {
+      font-size: 1.2em;
+      padding: 10px 15px;
+      border-radius: 5px;
+      border: none;
+      background-color: #4CAF50; /* Green */
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
   </style>
 </head>
 <body>
@@ -103,6 +134,11 @@
   <img id="character_image_display" src="" alt="Character"> <!-- Moved inside video-container -->
 </div>
 <div id="face_count_display">Faces detected: 0</div>
+<div class="set-time">
+  <h5 class="label-time">Time in seconds</h5>
+  <input type="text" id="time_input" placeholder="5">
+  <button id="set_time_button">Set Time</button>
+</div>
 <!-- Removed original character_image_display img tag from here -->
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
@@ -117,18 +153,39 @@
   const characterImageElement = document.getElementById('character_image_display');
   const videoPlaceholderElement = document.getElementById('video-placeholder');
   const countdownTimerElement = document.getElementById('countdown_timer'); // Added
+  const timeInputElement = document.getElementById('time_input');
+
+  const setTimeButton = document.getElementById('set_time_button');
+
+  setTimeButton.addEventListener('click', () => {
+    const inputTime = parseInt(timeInputElement.value, 10);
+    if (!isNaN(inputTime) && inputTime > 0) {
+      feedSwitchDuration = inputTime * 1000; // Convert seconds to milliseconds
+      console.log(`Feed switch duration set to ${feedSwitchDuration} ms`);
+      clearTimeout(mainCycleTimeoutId); // Clear any existing timeout
+      if (isLiveFeedActive) {
+        mainCycleTimeoutId = setTimeout(showPlaceholderVideo, feedSwitchDuration);
+      } else {
+        mainCycleTimeoutId = setTimeout(showLiveFeed, feedSwitchDuration);
+      }
+    } else {
+      console.error("Invalid time input. Please enter a positive number.");
+    }
+  });
+
+
 
   const hatImage = new Image();
   hatImage.src = 'assets/images/mickey headband-01.webp';
 
   const characterImagePaths = [
-    'assets/images/characters/1.webp',
-    'assets/images/characters/2.webp',
-    'assets/images/characters/3.webp'
+    'assets/images/char2/1.webp',
+    'assets/images/char2/2.webp',
+    'assets/images/char2/3.webp'
   ];
   let currentCharacterIndex = -1; // Start at -1, so first increment makes it 0
 
-  const feedSwitchDuration = 5000; // 1 minute
+  let feedSwitchDuration = 5000; // 1 minute
   // const characterImageCycleDuration = 60000; // This is no longer used by the primary switching logic
   // let characterCycleIntervalId = null; // No longer used
 
@@ -142,6 +199,9 @@
   characterImageElement.style.display = 'none';
   characterImageElement.style.opacity = 0; // Ensure opacity is also 0 initially
   videoPlaceholderElement.style.display = 'block';
+
+
+
 
 
   function updateCountdown(endTime) {
