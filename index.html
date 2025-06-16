@@ -163,10 +163,22 @@
       feedSwitchDuration = inputTime * 1000; // Convert seconds to milliseconds
       console.log(`Feed switch duration set to ${feedSwitchDuration} ms`);
       clearTimeout(mainCycleTimeoutId); // Clear any existing timeout
+
+      // Clear existing countdown interval
+      if (countdownIntervalId) clearInterval(countdownIntervalId);
+
+      let nextSwitchTime = Date.now() + feedSwitchDuration;
+
       if (isLiveFeedActive) {
         mainCycleTimeoutId = setTimeout(showPlaceholderVideo, feedSwitchDuration);
+        // Update countdown for the current live feed with new duration
+        updateCountdown(nextSwitchTime);
+        countdownIntervalId = setInterval(() => updateCountdown(nextSwitchTime), 1000);
       } else {
         mainCycleTimeoutId = setTimeout(showLiveFeed, feedSwitchDuration);
+        // Update countdown for the current placeholder video with new duration
+        updateCountdown(nextSwitchTime);
+        countdownIntervalId = setInterval(() => updateCountdown(nextSwitchTime), 1000);
       }
     } else {
       console.error("Invalid time input. Please enter a positive number.");
