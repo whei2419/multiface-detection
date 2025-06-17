@@ -129,7 +129,7 @@
         <img src="assets/images/Mickey and Friends TV Frame.webp" alt="Overlay Image" >
     </div> -->
   <video id="input_video" playsinline muted width="640" height="480"></video> <!-- Removed autoplay -->
-  <video id="video-placeholder" src="assets/video/4-3 Video (4).mp4" loop muted></video> <!-- Removed autoplay -->
+  <!-- <video id="video-placeholder" src="assets/video/4-3 Video (4).mp4" loop muted></video> Removed placeholder video element -->
   <canvas id="output_canvas" width="640" height="480"></canvas>
   <img id="character_image_display" src="" alt="Character"> <!-- Moved inside video-container -->
 </div>
@@ -151,7 +151,7 @@
   const canvasCtx = canvasElement.getContext('2d');
   const faceCountElement = document.getElementById('face_count_display');
   const characterImageElement = document.getElementById('character_image_display');
-  const videoPlaceholderElement = document.getElementById('video-placeholder');
+  // const videoPlaceholderElement = document.getElementById('video-placeholder'); // Removed
   const countdownTimerElement = document.getElementById('countdown_timer'); // Added
   const timeInputElement = document.getElementById('time_input');
 
@@ -161,25 +161,18 @@
     const inputTime = parseInt(timeInputElement.value, 10);
     if (!isNaN(inputTime) && inputTime > 0) {
       feedSwitchDuration = inputTime * 1000; // Convert seconds to milliseconds
-      console.log(`Feed switch duration set to ${feedSwitchDuration} ms`);
+      console.log(`Frame change duration set to ${feedSwitchDuration} ms`);
       clearTimeout(mainCycleTimeoutId); // Clear any existing timeout
+      if (countdownIntervalId) clearInterval(countdownIntervalId); // Clear existing countdown interval
 
-      // Clear existing countdown interval
-      if (countdownIntervalId) clearInterval(countdownIntervalId);
+      // Restart the cycle for changing character image
+      mainCycleTimeoutId = setTimeout(changeCharacterImageAndRestartTimer, feedSwitchDuration);
+      
+      // Update countdown for the current live feed with new duration
+      const nextSwitchTime = Date.now() + feedSwitchDuration;
+      updateCountdown(nextSwitchTime);
+      countdownIntervalId = setInterval(() => updateCountdown(nextSwitchTime), 1000);
 
-      let nextSwitchTime = Date.now() + feedSwitchDuration;
-
-      if (isLiveFeedActive) {
-        mainCycleTimeoutId = setTimeout(showPlaceholderVideo, feedSwitchDuration);
-        // Update countdown for the current live feed with new duration
-        updateCountdown(nextSwitchTime);
-        countdownIntervalId = setInterval(() => updateCountdown(nextSwitchTime), 1000);
-      } else {
-        mainCycleTimeoutId = setTimeout(showLiveFeed, feedSwitchDuration);
-        // Update countdown for the current placeholder video with new duration
-        updateCountdown(nextSwitchTime);
-        countdownIntervalId = setInterval(() => updateCountdown(nextSwitchTime), 1000);
-      }
     } else {
       console.error("Invalid time input. Please enter a positive number.");
     }
@@ -190,15 +183,16 @@
   const hatImage = new Image();
   hatImage.src = 'assets/images/mickey headband-01.webp';
 
-  // const characterImagePaths = [
-  //   'assets/images/char2/1.webp',
-  //   'assets/images/char2/2.webp',
-  //   'assets/images/char2/3.webp'
-  // ];
-
-    const characterImagePaths = [
-    'assets/images/new.png',
+  const characterImagePaths = [
+    'assets/images/frame/1.png',
+    'assets/images/frame/2.png',
+    'assets/images/frame/3.png',
+    'assets/images/frame/4.png',
   ];
+
+  //   const characterImagePaths = [
+  //   'assets/images/new.png',
+  // ];
 
   let currentCharacterIndex = -1; // Start at -1, so first increment makes it 0
 
@@ -206,17 +200,16 @@
   // const characterImageCycleDuration = 60000; // This is no longer used by the primary switching logic
   // let characterCycleIntervalId = null; // No longer used
 
-  let isLiveFeedActive = false;
+  let isLiveFeedActive = true; // Always true now
   let mainCycleTimeoutId = null;
   let countdownIntervalId = null; // Added for countdown timer
 
   // Initial element states
-  videoElement.style.display = 'none';
-  canvasElement.style.display = 'none';
-  characterImageElement.style.display = 'none';
+  videoElement.style.display = 'block'; // Show live feed from start
+  canvasElement.style.display = 'block'; // Show canvas from start
+  characterImageElement.style.display = 'none'; // Initially hidden, will be shown by showLiveFeed
   characterImageElement.style.opacity = 0; // Ensure opacity is also 0 initially
-  videoPlaceholderElement.style.display = 'block';
-
+  // videoPlaceholderElement.style.display = 'block'; // Removed
 
 
 
@@ -252,53 +245,14 @@
   // function cycleCharacter() { ... } // This function is not called in the modified logic
                                     // but can be kept if needed for future intra-feed cycling.
 
-  function showPlaceholderVideo() {
-    console.log("Switching to placeholder video");
-    isLiveFeedActive = false;
+  // function showPlaceholderVideo() { ... } // REMOVED THIS FUNCTION
 
-    videoElement.style.display = 'none';
-    canvasElement.style.display = 'none';
-    
-    // If character was visible, fade it out, then hide. Otherwise, just ensure it's hidden.
-    if (characterImageElement.style.opacity === '1' && characterImageElement.style.display !== 'none') {
-        characterImageElement.style.opacity = 0; // Start fade out
-        setTimeout(() => {
-            // Check if still in placeholder mode before hiding, in case of rapid switches
-            if (!isLiveFeedActive) { 
-                characterImageElement.style.display = 'none';
-            }
-        }, 500); // Match transition duration (0.5s)
-    } else {
-        characterImageElement.style.opacity = 0; // Ensure opacity is 0
-        characterImageElement.style.display = 'none'; // Ensure it's hidden
-    }
+  function showLiveFeed() { // This function now primarily sets up the initial live feed and character
+    console.log("Starting live feed. Initial character index: " + currentCharacterIndex);
+    isLiveFeedActive = true; // Ensure this is true
 
-    if (camera && camera.video) camera.stop(); 
-
-    videoPlaceholderElement.style.display = 'block';
-    videoPlaceholderElement.currentTime = 0; 
-    videoPlaceholderElement.play().catch(e => console.error("Error playing placeholder video:", e));
-    
-    // currentCharacterIndex is incremented here for the *next* live feed.
-    currentCharacterIndex = (currentCharacterIndex + 1) % characterImagePaths.length;
-    console.log("Index for next live feed prepared as: " + currentCharacterIndex);
-
-    clearTimeout(mainCycleTimeoutId);
-    mainCycleTimeoutId = setTimeout(showLiveFeed, feedSwitchDuration);
-
-    // Countdown logic
-    if (countdownIntervalId) clearInterval(countdownIntervalId);
-    const placeholderEndTime = Date.now() + feedSwitchDuration;
-    updateCountdown(placeholderEndTime);
-    countdownIntervalId = setInterval(() => updateCountdown(placeholderEndTime), 1000);
-  }
-
-  function showLiveFeed() {
-    console.log("Switching to live feed. Using character index: " + currentCharacterIndex);
-    isLiveFeedActive = true;
-
-    videoPlaceholderElement.style.display = 'none';
-    videoPlaceholderElement.pause();
+    // videoPlaceholderElement.style.display = 'none'; // Removed
+    // videoPlaceholderElement.pause(); // Removed
 
     videoElement.style.display = 'block';
     canvasElement.style.display = 'block';
@@ -312,19 +266,45 @@
         camera.start().catch(e => console.error("Error starting camera:", e));
     }
 
-    setAndFadeInCharacter(); // Uses the currentCharacterIndex prepared by showPlaceholderVideo
-
-    // The setInterval for an independent character cycle is removed.
-    // Character change is now tied to the feedSwitchDuration.
+    // Increment index for the first character image
+    currentCharacterIndex = (currentCharacterIndex + 1) % characterImagePaths.length;
+    setAndFadeInCharacter(); 
 
     clearTimeout(mainCycleTimeoutId); 
-    mainCycleTimeoutId = setTimeout(showPlaceholderVideo, feedSwitchDuration);
+    mainCycleTimeoutId = setTimeout(changeCharacterImageAndRestartTimer, feedSwitchDuration);
 
-    // Countdown logic
+    // Countdown logic for the first character image
     if (countdownIntervalId) clearInterval(countdownIntervalId);
     const liveFeedEndTime = Date.now() + feedSwitchDuration;
     updateCountdown(liveFeedEndTime);
     countdownIntervalId = setInterval(() => updateCountdown(liveFeedEndTime), 1000);
+  }
+
+  function changeCharacterImageAndRestartTimer() {
+    console.log("Changing character image.");
+    // Fade out current character
+    if (characterImageElement.style.opacity === '1') {
+        characterImageElement.style.opacity = 0;
+        setTimeout(() => {
+            // Increment index and set new character image after fade out
+            currentCharacterIndex = (currentCharacterIndex + 1) % characterImagePaths.length;
+            setAndFadeInCharacter();
+        }, 500); // Match transition duration
+    } else {
+        // If not visible, just change and fade in
+        currentCharacterIndex = (currentCharacterIndex + 1) % characterImagePaths.length;
+        setAndFadeInCharacter();
+    }
+
+    // Schedule next character change
+    clearTimeout(mainCycleTimeoutId);
+    mainCycleTimeoutId = setTimeout(changeCharacterImageAndRestartTimer, feedSwitchDuration);
+
+    // Reset countdown for the new character image
+    if (countdownIntervalId) clearInterval(countdownIntervalId);
+    const nextChangeTime = Date.now() + feedSwitchDuration;
+    updateCountdown(nextChangeTime);
+    countdownIntervalId = setInterval(() => updateCountdown(nextChangeTime), 1000);
   }
 
   const faceMesh = new FaceMesh({
@@ -424,7 +404,8 @@
   });
 
   // Start the cycle
-  showPlaceholderVideo();
+  // showPlaceholderVideo(); // Changed to showLiveFeed
+  showLiveFeed(); // Start directly with the live feed
 </script>
 
 </body>
