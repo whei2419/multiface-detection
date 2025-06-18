@@ -70,8 +70,8 @@
       transform: translateY(-50%);
       width: 70vw;
       height: calc(70vw * 0.75);
-      opacity: 0;
-      transition: opacity 0.5s ease-in-out;
+      opacity: 1; /* Always fully visible */
+      /* transition: opacity 0.5s ease-in-out; */ /* Remove transition */
       z-index: 150;  
     }
 
@@ -226,20 +226,9 @@
 
   function setAndFadeInCharacter() {
     characterImageElement.src = characterImagePaths[currentCharacterIndex];
-    
-    const fadeInImage = () => {
-        characterImageElement.style.opacity = 1;
-        characterImageElement.onload = null;
-    };
-
-    // Ensure image is display:block before trying to fade in opacity
     characterImageElement.style.display = 'block';
-
-    if (characterImageElement.complete && characterImageElement.naturalWidth !== 0) { 
-        fadeInImage();
-    } else {
-        characterImageElement.onload = fadeInImage;
-    }
+    characterImageElement.style.opacity = 1;
+    characterImageElement.onload = null;
   }
 
   // function cycleCharacter() { ... } // This function is not called in the modified logic
@@ -282,19 +271,9 @@
 
   function changeCharacterImageAndRestartTimer() {
     console.log("Changing character image.");
-    // Fade out current character
-    if (characterImageElement.style.opacity === '1') {
-        characterImageElement.style.opacity = 0;
-        setTimeout(() => {
-            // Increment index and set new character image after fade out
-            currentCharacterIndex = (currentCharacterIndex + 1) % characterImagePaths.length;
-            setAndFadeInCharacter();
-        }, 500); // Match transition duration
-    } else {
-        // If not visible, just change and fade in
-        currentCharacterIndex = (currentCharacterIndex + 1) % characterImagePaths.length;
-        setAndFadeInCharacter();
-    }
+    // Instantly change character image, no fade out
+    currentCharacterIndex = (currentCharacterIndex + 1) % characterImagePaths.length;
+    setAndFadeInCharacter();
 
     // Schedule next character change
     clearTimeout(mainCycleTimeoutId);
